@@ -1,5 +1,8 @@
 import streamlit as st
 
+st.markdown('# IST 488 Labs')
+st.markdown('# Júlia Brandão')
+
 lab1_page = st.Page('Lab1.py', title='Lab 1', icon=':material/description:')
 lab2_page = st.Page('Lab2.py', title='Lab 2', icon=':material/summarize:', default=True)
 
