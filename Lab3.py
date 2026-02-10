@@ -2,7 +2,7 @@ import streamlit as st
 from openai import OpenAI
 
 # Show title
-st.title("Lab 4 - RAG Chatbot")
+st.title("Lab 3 - Chatbot")
 
 # Create an OpenAI client
 if 'client' not in st.session_state:
