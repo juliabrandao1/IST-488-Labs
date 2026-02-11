@@ -32,7 +32,7 @@ def create_vector_db():
         model_name="text-embedding-3-small"
     )
 
-    collection = chroma_client.create_collection(
+    collection = chroma_client.get_or_create_collection(
         name="Lab4Collection",
         embedding_function=openai_ef
     )
