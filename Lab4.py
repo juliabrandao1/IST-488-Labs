@@ -78,17 +78,61 @@ if "Lab4_VectorDB" not in st.session_state:
 else:
     st.success("Vector database already loaded!")
 
-# --- Test the vector DB ---
-st.subheader("Test the Vector Database")
+# --- Initialize chat history ---
+if "lab4_messages" not in st.session_state:
+    st.session_state.lab4_messages = []
 
-test_query = st.text_input("Enter a search query to test:", value="Generative AI")
+# --- Display chat history ---
+for message in st.session_state.lab4_messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
 
-if test_query:
+# --- Chat input ---
+if prompt := st.chat_input("Ask a question about IST courses..."):
+    # Display user message
+    with st.chat_message("user"):
+        st.markdown(prompt)
+    # Add user message to history
+    st.session_state.lab4_messages.append({"role": "user", "content": prompt})
+
+    # Search the vector database for relevant documents
     results = st.session_state.Lab4_VectorDB.query(
-        query_texts=[test_query],
+        query_texts=[prompt],
         n_results=3
     )
 
-    st.write("**Top 3 matching documents:**")
-    for i, doc_id in enumerate(results['ids'][0]):
-        st.write(f"{i+1}. {doc_id}")
+    # Get the matching document texts and names
+    context = ""
+    sources = []
+    for i in range(len(results['ids'][0])):
+        doc_name = results['ids'][0][i]
+        doc_text = results['documents'][0][i]
+        sources.append(doc_name)
+        context += f"\n--- From {doc_name} ---\n{doc_text}\n"
+
+    # Build the prompt with RAG context
+    system_message = f"""You are a helpful assistant that answers questions about IST courses at Syracuse University. 
+Use the following course syllabus information to answer the user's question. 
+If you are using information from the provided syllabi, clearly state which course(s) you are referencing.
+If the question cannot be answered from the provided information, say so clearly.
+
+COURSE INFORMATION:
+{context}"""
+
+    # Send to OpenAI
+    client = st.session_state.client
+    stream = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": prompt}
+        ],
+        stream=True
+    )
+
+    # Display assistant response
+    with st.chat_message("assistant"):
+        response = st.write_stream(stream)
+
+    # Add assistant response to history
+    st.session_state.lab4_messages.append({"role": "assistant", "content": response})
