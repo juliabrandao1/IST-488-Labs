@@ -1,10 +1,16 @@
 import streamlit as st
 import requests
+import json
+from openai import OpenAI
 
 st.title("Lab 5: What to Wear Bot")
 
-# Get the API key from secrets
+# Get API keys from secrets
 OPENWEATHER_API_KEY = st.secrets["OPENWEATHER_API_KEY"]
+OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
+
+# Create OpenAI client
+client = OpenAI(api_key=OPENAI_API_KEY)
 
 def get_current_weather(location, api_key, units='imperial'):
     """Fetches current weather data for a given location from OpenWeatherMap."""
@@ -36,17 +42,85 @@ def get_current_weather(location, api_key, units='imperial'):
         'humidity': round(humidity, 2)
     }
 
-# Test the weather function
-st.subheader("Weather Test")
+# Define the tool for OpenAI
+tools = [
+    {
+        "type": "function",
+        "function": {
+            "name": "get_current_weather",
+            "description": "Get the current weather for a given location",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "location": {
+                        "type": "string",
+                        "description": "The city and state/country, e.g. Syracuse, NY, US"
+                    }
+                },
+                "required": ["location"]
+            }
+        }
+    }
+]
 
-try:
-    syracuse_weather = get_current_weather('Syracuse, NY, US', OPENWEATHER_API_KEY)
-    st.write("Syracuse Weather:", syracuse_weather)
-except Exception as e:
-    st.error(f"Syracuse error: {e}")
+# User input
+city = st.text_input("Enter a city to get weather-based clothing advice:", 
+                      placeholder="e.g. Syracuse, NY, US")
 
-try:
-    lima_weather = get_current_weather('Lima, Peru', OPENWEATHER_API_KEY)
-    st.write("Lima Weather:", lima_weather)
-except Exception as e:
-    st.error(f"Lima error: {e}")
+if city:
+    with st.spinner("Getting weather and generating suggestions..."):
+        try:
+            # Step 1: Send the user's request to OpenAI with the tool available
+            messages = [
+                {"role": "system", "content": "You are a helpful assistant that provides clothing suggestions and outdoor activity recommendations based on the current weather."},
+                {"role": "user", "content": f"What should I wear today in {city}? Also suggest some outdoor activities."}
+            ]
+
+            response = client.chat.completions.create(
+                model="gpt-4.1",
+                messages=messages,
+                tools=tools,
+                tool_choice="auto"
+            )
+
+            msg = response.choices[0].message
+
+            # Step 2: Check if OpenAI wants to call the weather tool
+            if msg.tool_calls:
+                tool_call = msg.tool_calls[0]
+                arguments = json.loads(tool_call.function.arguments)
+                location = arguments.get("location", "Syracuse, NY, US")
+
+                # Call the actual weather function
+                weather_data = get_current_weather(location, OPENWEATHER_API_KEY)
+
+                # Display the weather data
+                st.subheader(f"Current Weather in {weather_data['location']}")
+                st.write(f"Temperature: {weather_data['temperature']}°F")
+                st.write(f"Feels Like: {weather_data['feels_like']}°F")
+                st.write(f"High: {weather_data['temp_max']}°F | Low: {weather_data['temp_min']}°F")
+                st.write(f"Humidity: {weather_data['humidity']}%")
+
+                st.divider()
+
+                # Step 3: Send the weather data back to OpenAI for suggestions
+                messages.append(msg)
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": tool_call.id,
+                    "content": json.dumps(weather_data)
+                })
+
+                second_response = client.chat.completions.create(
+                    model="gpt-4.1",
+                    messages=messages
+                )
+
+                # Display the suggestions
+                st.subheader("What to Wear & Things to Do")
+                st.write(second_response.choices[0].message.content)
+
+        except Exception as e:
+            st.error(f"Error: {e}")
+
+            
