@@ -14,6 +14,7 @@ if 'openai_client' not in st.session_state:
     st.session_state.openai_client = OpenAI(api_key=st.secrets.OPENAI_API_KEY)
 
 structured_mode = st.sidebar.checkbox("Return structured summary")
+stream_mode = st.sidebar.checkbox("Enable streaming")
 
 # Get user question
 user_question = st.text_input("Ask a question:")
@@ -34,14 +35,31 @@ if user_question:
             st.write(f"- {fact}")
         st.caption(result.source_hint)
     else:
-        response = st.session_state.openai_client.responses.create(
-            model="gpt-4o",
-            instructions="You are a helpful research assistant. Cite your sources.",
-            input=user_question,
-            tools=[{"type": "web_search_preview"}]
-        )
-        st.markdown(response.output_text)
-        
+        if stream_mode:
+            stream = st.session_state.openai_client.responses.create(
+                model="gpt-4o",
+                instructions="You are a helpful research assistant. Cite your sources.",
+                input=user_question,
+                tools=[{"type": "web_search_preview"}],
+                stream=True
+            )
+            with st.empty():
+                full_text = ""
+                for event in stream:
+                    if hasattr(event, 'type') and event.type == 'response.output_text.delta':
+                        full_text += event.delta
+                        st.markdown(full_text)
+                    if hasattr(event, 'type') and event.type == 'response.completed':
+                        response = event.response
+        else:
+            response = st.session_state.openai_client.responses.create(
+                model="gpt-4o",
+                instructions="You are a helpful research assistant. Cite your sources.",
+                input=user_question,
+                tools=[{"type": "web_search_preview"}]
+            )
+            st.markdown(response.output_text)
+
     st.session_state.last_response_id = response.id
 
 # Follow-up question
@@ -59,4 +77,4 @@ if follow_up and 'last_response_id' in st.session_state:
     )
 
     st.markdown(follow_up_response.output_text)
-
+    
