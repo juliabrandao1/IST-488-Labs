@@ -8,10 +8,10 @@ lab2_page = st.Page('Lab2.py', title='Lab 2', icon=':material/summarize:')
 lab3_page = st.Page('Lab3.py', title='Lab 3', icon=':material/chat:')
 lab4_page = st.Page('Lab4.py', title='Lab 4', icon=':material/search:')
 lab5_page = st.Page('Lab5.py', title='Lab 5', icon=':material/search:')
-lab6_page = st.Page('Lab6.py', title='Lab 6', icon=':material/search:')
-lab7_page = st.Page('Lab7.py', title='Lab 7', icon=':material/search:', default=True)
+lab6_page = st.Page('Lab6.py', title='Lab 6', icon=':material/search:', default=True)
 
-pg = st.navigation([lab1_page, lab2_page, lab3_page, lab4_page, lab5_page, lab6_page, lab7_page])
+
+pg = st.navigation([lab1_page, lab2_page, lab3_page, lab4_page, lab5_page, lab6_page])
 st.set_page_config(page_title='IST-488 Labs', page_icon=':material/school:')
 pg.run()
 
