@@ -172,3 +172,33 @@ if st.button("Plan My Trip", type="primary"):
 if st.session_state.ma_result:
     st.markdown(st.session_state.ma_result['messages'][-1].content)
 
+# Agent Activity Log in the sidebar
+if st.session_state.ma_messages:
+    with st.sidebar:
+        st.divider()
+        st.subheader("Agent Activity Log")
+        for msg in st.session_state.ma_messages:
+            msg_name = getattr(msg, 'name', None)
+            tool_calls = getattr(msg, 'tool_calls', None)
+            if msg_name == 'research_agent':
+                st.write("🔍 research_agent")
+            elif msg_name == 'budget_agent':
+                st.write("💰 budget_agent")
+            elif msg_name == 'itinerary_agent':
+                st.write("📅 itinerary_agent")
+            elif msg_name == 'supervisor':
+                st.write("🧑‍💼 supervisor")
+            if tool_calls:
+                for tc in tool_calls:
+                    st.write(f"  🔧 Tool: {tc['name']}")
+
+# Single-Agent Comparison
+st.divider()
+st.subheader("Experiment: Single Agent vs Multi-Agent")
+
+if st.button("Run Single-Agent Comparison"):
+    with st.spinner("Running single-agent comparison..."):
+        single_llm = ChatOpenAI(model='gpt-4o-mini', temperature=0)
+        single_result = single_llm.invoke(trip_query)
+        st.markdown(single_result.content)
+
