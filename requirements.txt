@@ -3,3 +3,8 @@ openai
 pymupdf
 chromadb
 requests
+langchain
+langchain-openai
+langgraph
+langgraph-supervisor
+
